@@ -1,5 +1,5 @@
 // Based on https://github.com/yuin/goldmark/blob/master/renderer/html/html.go
-package html
+package markdown
 
 import (
 	"bytes"
@@ -15,7 +15,6 @@ import (
 type Config struct {
 	Writer    Writer
 	HardWraps bool
-	XHTML     bool
 	Unsafe    bool
 }
 
@@ -24,7 +23,6 @@ func NewConfig() Config {
 	return Config{
 		Writer:    DefaultWriter,
 		HardWraps: false,
-		XHTML:     false,
 		Unsafe:    false,
 	}
 }
@@ -34,8 +32,6 @@ func (c *Config) SetOption(name renderer.OptionName, value interface{}) {
 	switch name {
 	case optHardWraps:
 		c.HardWraps = value.(bool)
-	case optXHTML:
-		c.XHTML = value.(bool)
 	case optUnsafe:
 		c.Unsafe = value.(bool)
 	case optTextWriter:
@@ -93,29 +89,6 @@ func WithHardWraps() interface {
 	Option
 } {
 	return &withHardWraps{}
-}
-
-// XHTML is an option name used in WithXHTML.
-const optXHTML renderer.OptionName = "XHTML"
-
-type withXHTML struct {
-}
-
-func (o *withXHTML) SetConfig(c *renderer.Config) {
-	c.Options[optXHTML] = true
-}
-
-func (o *withXHTML) SetHTMLOption(c *Config) {
-	c.XHTML = true
-}
-
-// WithXHTML is a functional option indicates that nodes should be rendered in
-// xhtml instead of HTML5.
-func WithXHTML() interface {
-	Option
-	renderer.Option
-} {
-	return &withXHTML{}
 }
 
 // Unsafe is an option name used in WithUnsafe.
@@ -416,11 +389,6 @@ func (r *Renderer) renderThematicBreak(w util.BufWriter, source []byte, n ast.No
 	if n.Attributes() != nil {
 		RenderAttributes(w, n, ThematicAttributeFilter)
 	}
-	if r.XHTML {
-		_, _ = w.WriteString(" />\n")
-	} else {
-		_, _ = w.WriteString(">\n")
-	}
 	return ast.WalkContinue, nil
 }
 
@@ -574,11 +542,6 @@ func (r *Renderer) renderImage(w util.BufWriter, source []byte, node ast.Node, e
 	if n.Attributes() != nil {
 		RenderAttributes(w, n, ImageAttributeFilter)
 	}
-	if r.XHTML {
-		_, _ = w.WriteString(" />")
-	} else {
-		_, _ = w.WriteString(">")
-	}
 	return ast.WalkSkipChildren, nil
 }
 
@@ -610,11 +573,7 @@ func (r *Renderer) renderText(w util.BufWriter, source []byte, node ast.Node, en
 	} else {
 		r.Writer.Write(w, segment.Value(source))
 		if n.HardLineBreak() || (n.SoftLineBreak() && r.HardWraps) {
-			if r.XHTML {
-				_, _ = w.WriteString("<br />\n")
-			} else {
-				_, _ = w.WriteString("<br>\n")
-			}
+			// pass
 		} else if n.SoftLineBreak() {
 			_ = w.WriteByte('\n')
 		}
